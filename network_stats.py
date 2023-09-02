@@ -3,7 +3,7 @@ import itertools
 import json
 import os.path
 import csv
-from typing import Callable
+from typing import Callable, Hashable
 from collections import Counter
 
 import geopandas as gpd
@@ -94,10 +94,10 @@ def generate_clustering_scatter(G: nx.Graph):
     plt.savefig(f'./output/scatters/clustering/{state_abbrev}_{geog}.png')
     plt.close()
 
-def n_common_neighbors(G: nx.Graph, n1, n2):
+def n_common_neighbors(G: nx.Graph, n1: Hashable, n2: Hashable):
     return len(set(G.neighbors(n1)).intersection(G.neighbors(n2)))
 
-def is_windowpaneish(G: nx.Graph, node):
+def is_windowpaneish(G: nx.Graph, node: Hashable):
     if G.degree[node] != 4:
         return False
     elif nx.clustering(G, node) != 0:
@@ -109,13 +109,13 @@ def is_windowpaneish(G: nx.Graph, node):
 
         return sum(1 for x in trim if x > 1) >= 4
 
-def is_half_wheely(G: nx.Graph, node):
+def is_half_wheely(G: nx.Graph, node: Hashable):
     return (nx.triangles(G, node) >= 10 and G.degree[node] >= 10)
 
-def list_nodes(G: nx.Graph, property_fn):
+def list_nodes(G: nx.Graph, property_fn: Callable[[nx.Graph, Hashable], bool]):
     return list(filter(lambda node: property_fn(G, node), G.nodes()))
 
-def generate_csv(G: nx.Graph, property_fn):
+def generate_csv(G: nx.Graph, property_fn: Callable[[nx.Graph, Hashable], bool]):
     nodes = list_nodes(G, property_fn)
     geoids = [G.nodes[n]["GEOID20"] for n in nodes]
     geog, state = [G.graph["geog"], us.states.lookup(G.graph["state_abbrev"])]
@@ -126,7 +126,7 @@ def generate_csv(G: nx.Graph, property_fn):
         w = csv.writer(file)
         w.writerows([[g] for g in geoids])
 
-def generate_shp(G: nx.Graph, property_fn):
+def generate_shp(G: nx.Graph, property_fn: Callable[[nx.Graph, Hashable], bool]):
     nodes = list_nodes(G, property_fn)
     degrees = [G.degree[node] for node in nodes]
     geoids = [G.nodes[n]["GEOID20"] for n in nodes]
@@ -154,7 +154,7 @@ def generate_shp(G: nx.Graph, property_fn):
     os.makedirs(f"output/shapefiles/{property_fn.__name__}/{state.abbr.lower()}_{geog}/", exist_ok=True)
     output_gdf.to_file(f"output/shapefiles/{property_fn.__name__}/{state.abbr.lower()}_{geog}/{state.abbr.lower()}_{geog}.shp")
 
-def l_infty_ball(G, c):
+def l_infty_ball(G: nx.Graph, c: Hashable):
     eg = nx.ego_graph(G, c, radius=2)
     ball = eg.__class__()
     ball.add_nodes_from(eg)
@@ -168,7 +168,7 @@ def l_infty_ball(G, c):
 
     return ball
 
-def ball_iso_types(G):
+def ball_iso_types(G: nx.Graph):
     iso_classes = []
     # lens = []
     # balls = [l_infty_ball(G, n) for n in tqdm(list(G.nodes()))]
@@ -197,7 +197,7 @@ def ball_iso_types(G):
     G.graph["ball_iso_classes"] = iso_classes
     return G       
 
-def apply_to_all(fn: Callable[[nx.Graph], None], property_fn, states: list[us.states.State], geogs: list[str]):
+def apply_to_all(fn: Callable[[nx.Graph], None], property_fn: Callable[[nx.Graph, Hashable], bool], states: list[us.states.State], geogs: list[str]):
     for state in states:
         for geog in geogs:
             if os.path.isfile(f"./data/{geog}_graphs/{GEOGRAPHIES[geog]['graph']}_{state.abbr.lower()}.json"):
