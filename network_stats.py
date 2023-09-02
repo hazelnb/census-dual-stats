@@ -13,7 +13,6 @@ import networkx as nx
 import numpy as np
 from gerrychain.graph import Graph
 from networkx.readwrite import json_graph
-from scipy.stats import beta
 import us
 from tqdm.auto import tqdm
 
@@ -25,17 +24,17 @@ GEOGRAPHIES = {
     "vtd": {"graph": "vtd", "shapefile": "vtd20"}
 }
 
-def import_graph(geog: str, state_abbrev: str, path = None):
+def import_graph(geog: str, state: us.states.State, path = None):
     if path is not None:
         f = open(path)
     else:
-        f = open(f'./data/{geog}_graphs/{GEOGRAPHIES[geog]["graph"]}_{state_abbrev}.json')
+        f = open(f'./data/{geog}_graphs/{GEOGRAPHIES[geog]["graph"]}_{state.abbr.lower()}.json')
 
     j = json.load(f)
     G = json_graph.adjacency_graph(j)
 
     G.graph['geog'] = geog
-    G.graph['state_abbrev'] = state_abbrev
+    G.graph['state_abbrev'] = state.abbr.lower()
 
     return G
 
@@ -193,7 +192,7 @@ def apply_to_all(fn: Callable[[nx.Graph], None], property_fn, states: list[us.st
         for geog in geogs:
             if os.path.isfile(f"./data/{geog}_graphs/{GEOGRAPHIES[geog]['graph']}_{state.abbr.lower()}.json"):
                 print(f"{state.abbr} {geog}s")
-                G = import_graph(geog, state.abbr.lower())
+                G = import_graph(geog, state)
                 fn(G, property_fn)
                 del G
             else:
