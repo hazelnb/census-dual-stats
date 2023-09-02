@@ -120,9 +120,9 @@ def generate_csv(G: nx.Graph, property_fn):
     geoids = [G.nodes[n]["GEOID20"] for n in nodes]
     geog, state = [G.graph["geog"], us.states.lookup(G.graph["state_abbrev"])]
 
-    os.makedirs("output/csvs", exist_ok=True)
+    os.makedirs(f"output/csvs/{property_fn.__name__}/", exist_ok=True)
 
-    with open(f"output/csvs/{property_fn.__name__}/{state.abbr.lower()}_{geog}.csv") as file:
+    with open(f"output/csvs/{property_fn.__name__}/{state.abbr.lower()}_{geog}.csv", "w+") as file:
         w = csv.writer(file)
         w.writerows([[g] for g in geoids])
 
@@ -132,7 +132,17 @@ def generate_shp(G: nx.Graph, property_fn):
     geoids = [G.nodes[n]["GEOID20"] for n in nodes]
     pd.DataFrame.from_dict(geoids)
     geog, state = [G.graph["geog"], us.states.lookup(G.graph["state_abbrev"])]
-    gdf   = gpd.GeoDataFrame.from_file(f"./data/{geog}_shapefiles/tl_2020_{state.fips}_{GEOGRAPHIES[geog]['shapefile']}/tl_2020_{state.fips}_{GEOGRAPHIES[geog]['shapefile']}.shp")
+
+    shp_fname = f"./data/{geog}_shapefiles/tl_2020_{state.fips}_{GEOGRAPHIES[geog]['shapefile']}/tl_2020_{state.fips}_{GEOGRAPHIES[geog]['shapefile']}.shp"
+    zip_fname = f"./data/{geog}_shapefiles/tl_2020_{state.fips}_{GEOGRAPHIES[geog]['shapefile']}.zip"
+
+    if os.path.isfile(shp_fname):
+        gdf = gpd.GeoDataFrame.from_file(shp_fname)
+    elif os.path.isfile(zip_fname):
+        gdf = gpd.GeoDataFrame.from_file(zip_fname)
+    else:
+        print(f"No shapefile found for {state.name} {geog}")
+        return
 
     if "GEOID20" in gdf.columns:
         output_gdf = gdf[gdf["GEOID20"].isin(geoids)].copy()
